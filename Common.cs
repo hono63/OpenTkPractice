@@ -2,8 +2,11 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Text;
+using System.Drawing; // NugetでSystem.Drawing.Commonを入れる。windowsでしか使えないらしいが。。
+using System.Drawing.Imaging;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
 
 namespace HelloDotNetCoreTK
 {
@@ -105,6 +108,63 @@ namespace HelloDotNetCoreTK
         {
             GL.UseProgram(Handle);
             GL.Uniform3(_uniformLocations[name], data);
+        }
+    }
+
+    /// <summary>
+    /// テクスチャ クラス
+    /// </summary>
+    public class Texture
+    {
+        public readonly int Handle;
+        private const TextureTarget TARGET2D = TextureTarget.Texture2D;
+        public static Texture LoadFromFile(string path)
+        {
+            int handle = GL.GenTexture();
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TARGET2D, handle);
+            // .Netの System.Drawing ライブラリを使う
+            using (var img = new Bitmap(path))
+            {
+                var data = img.LockBits(
+                    new Rectangle(0, 0, img.Width, img.Height),
+                    ImageLockMode.ReadOnly,
+                    System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                // テクスチャ生成 
+                GL.TexImage2D(
+                    TARGET2D,
+                    0, // level
+                    PixelInternalFormat.Rgba,
+                    img.Width,
+                    img.Height,
+                    0, // border
+                    PixelFormat.Bgra,
+                    PixelType.UnsignedByte,
+                    data.Scan0);
+            }
+            // 設定
+            GL.TexParameter(TARGET2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            GL.TexParameter(TARGET2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GL.TexParameter(TARGET2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat); // X軸
+            GL.TexParameter(TARGET2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat); // Y軸
+            // Mipmap (小さいテクスチャ?)
+            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+            return new Texture(handle);
+        }
+
+        public Texture(int glHandle)
+        {
+            Handle = glHandle;
+        }
+
+        /// <summary>
+        /// Activate Texture
+        /// </summary>
+        /// <param name="unit"></param>
+        public void Use(TextureUnit unit)
+        {
+            GL.ActiveTexture(unit);
+            GL.BindTexture(TARGET2D, Handle);
         }
     }
 }

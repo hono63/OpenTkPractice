@@ -17,7 +17,7 @@ namespace HelloDotNetCoreTK
     public class Window : GameWindow
     {
         // 三角形の頂点 NDC (Normalized Device Coordinates)
-        private readonly float[] _vertex =
+        private readonly float[] _vertexTriangle =
         {
             -0.5f, -0.5f, 0.0f, // 左下
             +0.5f, -0.5f, 0.0f, // 右下
@@ -38,6 +38,14 @@ namespace HelloDotNetCoreTK
             +0.5f, -0.5f, 0.0f,   0f, 1f, 0f, // 右下
              0.0f, +0.5f, 0.0f,   0f, 0f, 1f, // 上
         };
+        // テクスチャ付き四角形
+        private readonly float[] _vertexTextured =
+        {   // pos                // texture coordinate
+            +0.5f, +0.5f, 0.0f,   1f, 1f, // 右上
+            +0.5f, -0.5f, 0.0f,   1f, 0f, // 右下
+            -0.5f, -0.5f, 0.0f,   0f, 0f, // 左下
+            -0.5f, +0.5f, 0.0f,   0f, 1f, // 左上
+        };
         // EBO (Element Buffer Object)が_vertexRectangleのどの頂点を使うかのインデックス？
         private readonly uint[] _index =
         { // 0から始まることに注意
@@ -49,6 +57,7 @@ namespace HelloDotNetCoreTK
         private int _vertexArrayObj;
         private int _elementBufObj;
         private Shader _shader;
+        private Texture _texture;
 
         public Window(GameWindowSettings gameWinSet, NativeWindowSettings nativeWinSet)
             : base(gameWinSet, nativeWinSet)
@@ -61,22 +70,37 @@ namespace HelloDotNetCoreTK
         {
             // OpenGL初期化
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            PrepareTri();
+            PrepareTexturedRec();
             // shader
             _shader = new Shader(@"..\..\..\Shaders\shader.vert", @"..\..\..\Shaders\shader.frag");
             _shader.Use();
+            InitTexture();
             StartStopwatch();
             base.OnLoad();
+        }
+
+        // 配列オブジェクトを生成
+        private void GenArray(float[] vertices)
+        {
+            _vertexBufObj = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufObj);
+            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
+            _vertexArrayObj = GL.GenVertexArray();
+            GL.BindVertexArray(_vertexArrayObj);
+        }
+
+        // EBO (element buffer object) を生成
+        private void GenEBO(uint[] indices)
+        {
+            _elementBufObj = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufObj);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsageHint.StaticDraw);
         }
 
         // 三角形を準備
         private void PrepareTri()
         {
-            _vertexBufObj = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufObj);
-            GL.BufferData(BufferTarget.ArrayBuffer, _vertex.Length * sizeof(float), _vertex, BufferUsageHint.StaticDraw);
-            _vertexArrayObj = GL.GenVertexArray();
-            GL.BindVertexArray(_vertexArrayObj);
+            GenArray(_vertexTriangle);
             // 頂点pointer
             int idx = 0, size = 3, stride = 3 * sizeof(float), offset = 0;
             VertexAttribPointerType typ = VertexAttribPointerType.Float;
@@ -87,11 +111,7 @@ namespace HelloDotNetCoreTK
         // 色付き三角形
         private void PrepareGradTri()
         {
-            _vertexBufObj = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufObj);
-            GL.BufferData(BufferTarget.ArrayBuffer, _vertexGradation.Length * sizeof(float), _vertexGradation, BufferUsageHint.StaticDraw);
-            _vertexArrayObj = GL.GenVertexArray();
-            GL.BindVertexArray(_vertexArrayObj);
+            GenArray(_vertexGradation);
             // 頂点pointer
             int idx = 0, size = 3, stride = 6 * sizeof(float), offset = 0;
             VertexAttribPointerType typ = VertexAttribPointerType.Float;
@@ -105,23 +125,39 @@ namespace HelloDotNetCoreTK
             GL.EnableVertexAttribArray(idx);
         }
 
+        // テクスチャ付き四角形
+        private void PrepareTexturedRec()
+        {
+            GenArray(_vertexTextured);
+            GenEBO(_index);
+        }
+
+        private void InitTexture()
+        {
+            int size = 3, stride = 5 * sizeof(float), offset = 0;
+            VertexAttribPointerType typ = VertexAttribPointerType.Float;
+            bool is_normalized = false;
+            var vertLoc = _shader.GetAttribLocation("aPosition");
+            GL.EnableVertexAttribArray(vertLoc);
+            GL.VertexAttribPointer(vertLoc, size, typ, is_normalized, stride, offset);
+            offset = 3 * sizeof(float);
+            var texLoc = _shader.GetAttribLocation("aTexCoord");
+            GL.EnableVertexAttribArray(texLoc);
+            GL.VertexAttribPointer(texLoc, size, typ, is_normalized, stride, offset);
+            _texture = Texture.LoadFromFile(@"..\..\..\Resources\container.png");
+            _texture.Use(OpenTK.Graphics.OpenGL4.TextureUnit.Texture0);
+        }
+
         private void PrepareEBO()
         {
-            _vertexBufObj = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufObj);
-            GL.BufferData(BufferTarget.ArrayBuffer, _vertex.Length * sizeof(float), _vertex, BufferUsageHint.StaticDraw);
-            _vertexArrayObj = GL.GenVertexArray();
-            GL.BindVertexArray(_vertexArrayObj);
+            GenArray(_vertexRectangle);
+            GenEBO(_index);
             // 頂点pointer
             int idx = 0, size = 3, stride = 3 * sizeof(float), offset = 0;
             VertexAttribPointerType typ = VertexAttribPointerType.Float;
             bool is_normalized = false;
             GL.VertexAttribPointer(idx, size, typ, is_normalized, stride, offset);
             GL.EnableVertexAttribArray(idx);
-            // EBO
-            _elementBufObj = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufObj);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, _index.Length * sizeof(uint), _index, BufferUsageHint.StaticDraw);
         }
 
         private void StartStopwatch()
@@ -144,11 +180,11 @@ namespace HelloDotNetCoreTK
         {
             GL.Clear(ClearBufferMask.ColorBufferBit);
             _shader.Use();
-            ChangeColorByTimer();
+            //ChangeColorByTimer();
             GL.BindVertexArray(_vertexArrayObj);
-            int first = 0, count = 3;
-            GL.DrawArrays(PrimitiveType.Triangles, first, count);
-            //GL.DrawElements(PrimitiveType.Triangles, _index.Length, DrawElementsType.UnsignedInt, 0);
+            //int first = 0, count = 3;
+            //GL.DrawArrays(PrimitiveType.Triangles, first, count);
+            GL.DrawElements(PrimitiveType.Triangles, _index.Length, DrawElementsType.UnsignedInt, 0);
             SwapBuffers();
             base.OnRenderFrame(e);
         }
@@ -190,6 +226,7 @@ namespace HelloDotNetCoreTK
             GL.DeleteBuffer(_elementBufObj);
             GL.DeleteVertexArray(_vertexArrayObj);
             GL.DeleteProgram(_shader.Handle);
+            GL.DeleteTexture(_texture.Handle);
             base.OnUnload();
         }
     }
