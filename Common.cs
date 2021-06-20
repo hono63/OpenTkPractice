@@ -10,6 +10,9 @@ using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
 
 namespace HelloDotNetCoreTK
 {
+    /// <summary>
+    /// シェーダークラス
+    /// </summary>
     public class Shader
     {
         public readonly int Handle;
@@ -165,6 +168,85 @@ namespace HelloDotNetCoreTK
         {
             GL.ActiveTexture(unit);
             GL.BindTexture(TARGET2D, Handle);
+        }
+    }
+
+    /// <summary>
+    /// カメラ クラス
+    /// </summary>
+    public class Camera
+    {
+        private Vector3 _front = -Vector3.UnitZ;
+        private Vector3 _up    = Vector3.UnitY;
+        private Vector3 _right = Vector3.UnitX;
+        private float _pitch;
+        private float _yaw = -MathHelper.PiOver2;
+        private float _fov = MathHelper.PiOver2;
+
+        public Camera(Vector3 pos, float aspectRatio)
+        {
+            Position = pos;
+            AspectRatio = aspectRatio;
+        }
+
+        public Vector3 Position { get; set; }
+        public float AspectRatio { get; set; }
+        public Vector3 Front => _front;
+        public Vector3 Up => _up;
+        public Vector3 Right => _right;
+        public float Pitch
+        {
+            get => MathHelper.RadiansToDegrees(_pitch);
+            set
+            {
+                // gimbal lock回避のため-89~89°とする
+                var angle = MathHelper.Clamp(value, -89f, 89f);
+                _pitch = MathHelper.DegreesToRadians(angle);
+                UpdateVectors();
+            }
+        }
+
+        public float Yaw
+        {
+            get => MathHelper.RadiansToDegrees(_yaw);
+            set
+            {
+                _yaw = MathHelper.DegreesToRadians(value);
+                UpdateVectors();
+            }
+        }
+        public float Fov
+        {
+            get => MathHelper.RadiansToDegrees(_fov);
+            set
+            {
+                var angle = MathHelper.Clamp(value, 1f, 45f);
+                _fov = MathHelper.DegreesToRadians(angle);
+            }
+        }
+
+        public Matrix4 GetViewMatrix()
+        {
+            Vector3 eye = Position;
+            Vector3 target = Position + _front;
+            return Matrix4.LookAt(eye, target, _up);
+        }
+
+        public Matrix4 GetProjectionMatrix()
+        {
+            float depthNear = 0.01f, depthFar = 100f;
+            return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, depthNear, depthFar);
+        }
+
+        private void UpdateVectors()
+        {
+            // 三角比でXYZ比率を求める
+            _front.X = MathF.Cos(_pitch) * MathF.Cos(_yaw); // 前後
+            _front.Y = MathF.Sin(_pitch);                   // 上下
+            _front.Z = MathF.Cos(_pitch) * MathF.Sin(_yaw); // 右左
+            _front = Vector3.Normalize(_front);
+            _right = Vector3.Normalize(Vector3.Cross(_front, Vector3.UnitY));
+            _up = Vector3.Normalize(Vector3.Cross(_right, _front));
         }
     }
 }

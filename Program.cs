@@ -15,7 +15,7 @@ namespace HelloDotNetCoreTK
                 Size = new Vector2i(800, 600),
                 Title = "Hello TK 4.6.5",
             };
-            using (var window = new Window(GameWindowSettings.Default, winSetting))
+            using (var window = new Window3D(GameWindowSettings.Default, winSetting))
             {
                 window.Run();
             }
