@@ -137,9 +137,12 @@ namespace HelloDotNetCoreTK
             int size = 3, stride = 5 * sizeof(float), offset = 0;
             VertexAttribPointerType typ = VertexAttribPointerType.Float;
             bool is_normalized = false;
+            // 四角形頂点
             var vertLoc = _shader.GetAttribLocation("aPosition");
             GL.EnableVertexAttribArray(vertLoc);
             GL.VertexAttribPointer(vertLoc, size, typ, is_normalized, stride, offset);
+            // テクスチャ頂点
+            size = 2;
             offset = 3 * sizeof(float);
             var texLoc = _shader.GetAttribLocation("aTexCoord");
             GL.EnableVertexAttribArray(texLoc);
