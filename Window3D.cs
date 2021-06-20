@@ -17,7 +17,7 @@ namespace HelloDotNetCoreTK
     public class Window3D : GameWindow
     {
         // キューブ
-        private readonly float[] _vertex =
+        private readonly float[] _vertexCube =
         {
             -0.5f, -0.5f, -0.5f, // Front face
              0.5f, -0.5f, -0.5f,
@@ -61,6 +61,52 @@ namespace HelloDotNetCoreTK
             -0.5f,  0.5f,  0.5f,
             -0.5f,  0.5f, -0.5f
         };
+        // Normal付きCube
+        private readonly float[] _vertex =
+{
+             // Position          Normal
+            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, // Front face
+             0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+
+            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, // Back face
+             0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+
+            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f, // Left face
+            -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+            -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+
+             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, // Right face
+             0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+             0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+
+            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, // Bottom face
+             0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+
+            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, // Top face
+             0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+        };
         private readonly Vector3 _lightPos = new Vector3(1.2f, 1.0f, 2.0f);
         private int _vertexBufObj;
         private int _vaoModel;
@@ -72,6 +118,13 @@ namespace HelloDotNetCoreTK
         private Vector2 _lastPos;
         private Texture _texture;
         private Texture _texture2;
+
+        const int SIZE = 3;
+        const int STRIDE6 = 6 * sizeof(float);
+        const int OFFSET0 = 0;
+        const int OFFSET3 = 3 * sizeof(float);
+        const bool NOT_NORM = false;
+        const VertexAttribPointerType TYPE = VertexAttribPointerType.Float;
 
         public Window3D(GameWindowSettings gameWinSet, NativeWindowSettings nativeWinSet)
             : base(gameWinSet, nativeWinSet)
@@ -89,8 +142,8 @@ namespace HelloDotNetCoreTK
             // shader
             _lightingShader = new Shader(@"..\..\..\Shaders\shader.vert", @"..\..\..\Shaders\lighting.frag");
             _lampShader = new Shader(@"..\..\..\Shaders\shader.vert", @"..\..\..\Shaders\shader.frag");
-            InitVAO(_lightingShader, out _vaoModel);
-            InitVAO(_lampShader, out _vaoLamp);
+            _vaoModel = InitNormalVAO(_lightingShader);
+            _vaoLamp  = InitVAO(_lampShader);
             _camera = new Camera(Vector3.UnitZ * 3, Size.X / (float)Size.Y);
             CursorGrabbed = true;
             base.OnLoad();
@@ -104,16 +157,23 @@ namespace HelloDotNetCoreTK
             GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
         }
 
-        private void InitVAO(Shader shader, out int vao)
+        private int InitVAO(Shader shader)
         {
-            vao = GL.GenVertexArray();
+            int vao = GL.GenVertexArray();
             GL.BindVertexArray(vao);
-            int size = 3, stride = 3 * sizeof(float), offset = 0;
-            VertexAttribPointerType typ = VertexAttribPointerType.Float;
-            bool norm = false;
             var vertLoc = shader.GetAttribLocation("aPos");
             GL.EnableVertexAttribArray(vertLoc);
-            GL.VertexAttribPointer(vertLoc, size, typ, norm, stride, offset);
+            GL.VertexAttribPointer(vertLoc, SIZE, TYPE, NOT_NORM, STRIDE6, OFFSET0);
+            return vao;
+        }
+
+        private int InitNormalVAO(Shader shader)
+        {
+            int vao = InitVAO(shader);
+            var normalLoc = shader.GetAttribLocation("aNormal");
+            GL.EnableVertexAttribArray(normalLoc);
+            GL.VertexAttribPointer(normalLoc, SIZE, TYPE, NOT_NORM, STRIDE6, OFFSET3);
+            return vao;
         }
 
         /// <summary>
@@ -124,27 +184,29 @@ namespace HelloDotNetCoreTK
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             
             // Draw Cube
-            GL.BindVertexArray(_vaoModel);
-            _lightingShader.Use();
-            _lightingShader.SetMatrix4("model", Matrix4.Identity);
-            _lightingShader.SetMatrix4("view", _camera.GetViewMatrix());
-            _lightingShader.SetMatrix4("projection", _camera.GetProjectionMatrix());
             _lightingShader.SetVector3("objectColor", new Vector3(1f, 0.5f, 0.31f));
             _lightingShader.SetVector3("lightColor", new Vector3(1f, 1f, 1f));
-            GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
-            
+            _lightingShader.SetVector3("lightPos", _lightPos);
+            _lightingShader.SetVector3("viewPos", _camera.Position);
+            DrawShader(_lightingShader, _vaoModel, Matrix4.Identity);
+
             // Draw Lamp
-            GL.BindVertexArray(_vaoLamp);
-            _lampShader.Use();
             Matrix4 scale = Matrix4.CreateScale(0.2f);
             Matrix4 lampMatrix = scale * Matrix4.CreateTranslation(_lightPos);
-            _lampShader.SetMatrix4("model", lampMatrix);
-            _lampShader.SetMatrix4("view", _camera.GetViewMatrix());
-            _lampShader.SetMatrix4("projection", _camera.GetProjectionMatrix());
-            GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
+            DrawShader(_lampShader, _vaoLamp, lampMatrix);
 
             SwapBuffers();
             base.OnRenderFrame(e);
+        }
+
+        void DrawShader(Shader shader, int vao, Matrix4 modelPos)
+        {
+            GL.BindVertexArray(vao);
+            shader.Use();
+            shader.SetMatrix4("model", modelPos);
+            shader.SetMatrix4("view", _camera.GetViewMatrix());
+            shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+            GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
         }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
