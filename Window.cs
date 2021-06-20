@@ -16,14 +16,29 @@ namespace HelloDotNetCoreTK
     public class Window : GameWindow
     {
         // 三角形の頂点 NDC (Normalized Device Coordinates)
-        private readonly float[] _vertex =
+        private readonly float[] _vertexTriangle =
         {
             -0.5f, -0.5f, 0.0f, // 左下
             +0.5f, -0.5f, 0.0f, // 右下
              0.0f, +0.5f, 0.0f, // 上
         };
+        // 四角形
+        private readonly float[] _vertex2 =
+        {
+            +0.5f, +0.5f, 0.0f, // 右上
+            +0.5f, -0.5f, 0.0f, // 右下
+            -0.5f, -0.5f, 0.0f, // 左下
+            -0.5f, +0.5f, 0.0f, // 左上
+        };
+        // EBO (Element Buffer Object)が_vertex2のどの頂点を使うかのインデックス？
+        private readonly uint[] _index =
+        { // 0から始まることに注意
+            0, 1, 3,
+            1, 2, 3,
+        };
         private int _vertexBufObj;
         private int _vertexArrayObj;
+        private int _elementBufObj;
         private Shader _shader;
 
         public Window(GameWindowSettings gameWinSet, NativeWindowSettings nativeWinSet)
@@ -36,11 +51,16 @@ namespace HelloDotNetCoreTK
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             _vertexBufObj = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufObj);
-            GL.BufferData(BufferTarget.ArrayBuffer, _vertex.Length * sizeof(float), _vertex, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ArrayBuffer, _vertex2.Length * sizeof(float), _vertex2, BufferUsageHint.StaticDraw);
             _vertexArrayObj = GL.GenVertexArray();
             GL.BindVertexArray(_vertexArrayObj);
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
+            // EBO
+            _elementBufObj = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufObj);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, _index.Length * sizeof(uint), _index, BufferUsageHint.StaticDraw);
+            // shader
             _shader = new Shader(@"..\..\..\Shaders\shader.vert", @"..\..\..\Shaders\shader.frag");
             _shader.Use();
             base.OnLoad();
@@ -52,7 +72,8 @@ namespace HelloDotNetCoreTK
             GL.Clear(ClearBufferMask.ColorBufferBit);
             _shader.Use();
             GL.BindVertexArray(_vertexArrayObj);
-            GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
+            //GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
+            GL.DrawElements(PrimitiveType.Triangles, _index.Length, DrawElementsType.UnsignedInt, 0);
             SwapBuffers();
             base.OnRenderFrame(e);
         }
@@ -80,6 +101,7 @@ namespace HelloDotNetCoreTK
             GL.BindVertexArray(0);
             GL.UseProgram(0);
             GL.DeleteBuffer(_vertexBufObj);
+            GL.DeleteBuffer(_elementBufObj);
             GL.DeleteVertexArray(_vertexArrayObj);
             GL.DeleteProgram(_shader.Handle);
             base.OnUnload();
