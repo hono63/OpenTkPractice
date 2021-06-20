@@ -7,7 +7,7 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using OpenTK.Windowing.Desktop;
-using OpenTK.Graphics.OpenGL;
+using OpenTK.Graphics.OpenGL4;
 using OpenTK.Input;
 
 using HelloDotNetCoreTK;
@@ -41,10 +41,10 @@ namespace HelloDotNetCoreTK
         // テクスチャ付き四角形
         private readonly float[] _vertexTextured =
         {   // pos                // texture coordinate
-            +0.5f, +0.5f, 0.0f,   1f, 1f, // 右上
-            +0.5f, -0.5f, 0.0f,   1f, 0f, // 右下
-            -0.5f, -0.5f, 0.0f,   0f, 0f, // 左下
-            -0.5f, +0.5f, 0.0f,   0f, 1f, // 左上
+            +0.5f, +0.5f, 0.0f,   1f, 0f, // 右上
+            +0.5f, -0.5f, 0.0f,   1f, 1f, // 右下
+            -0.5f, -0.5f, 0.0f,   0f, 1f, // 左下
+            -0.5f, +0.5f, 0.0f,   0f, 0f, // 左上
         };
         // EBO (Element Buffer Object)が_vertexRectangleのどの頂点を使うかのインデックス？
         private readonly uint[] _index =
@@ -58,6 +58,7 @@ namespace HelloDotNetCoreTK
         private int _elementBufObj;
         private Shader _shader;
         private Texture _texture;
+        private Texture _texture2;
 
         public Window(GameWindowSettings gameWinSet, NativeWindowSettings nativeWinSet)
             : base(gameWinSet, nativeWinSet)
@@ -74,7 +75,7 @@ namespace HelloDotNetCoreTK
             // shader
             _shader = new Shader(@"..\..\..\Shaders\shader.vert", @"..\..\..\Shaders\shader.frag");
             _shader.Use();
-            InitTexture();
+            InitMultiTexture();
             StartStopwatch();
             base.OnLoad();
         }
@@ -148,7 +149,16 @@ namespace HelloDotNetCoreTK
             GL.EnableVertexAttribArray(texLoc);
             GL.VertexAttribPointer(texLoc, size, typ, is_normalized, stride, offset);
             _texture = Texture.LoadFromFile(@"..\..\..\Resources\container.png");
-            _texture.Use(OpenTK.Graphics.OpenGL4.TextureUnit.Texture0);
+            _texture.Use(TextureUnit.Texture0);
+        }
+
+        private void InitMultiTexture()
+        {
+            InitTexture();
+            _texture2 = Texture.LoadFromFile(@"..\..\..\Resources\awesomeface.png");
+            _texture2.Use(TextureUnit.Texture1);
+            _shader.SetInt("texture0", 0);
+            _shader.SetInt("texture1", 1);
         }
 
         private void PrepareEBO()
@@ -183,6 +193,8 @@ namespace HelloDotNetCoreTK
         {
             GL.Clear(ClearBufferMask.ColorBufferBit);
             _shader.Use();
+            _texture.Use(TextureUnit.Texture0);
+            _texture2.Use(TextureUnit.Texture1);
             //ChangeColorByTimer();
             GL.BindVertexArray(_vertexArrayObj);
             //int first = 0, count = 3;
@@ -230,6 +242,7 @@ namespace HelloDotNetCoreTK
             GL.DeleteVertexArray(_vertexArrayObj);
             GL.DeleteProgram(_shader.Handle);
             GL.DeleteTexture(_texture.Handle);
+            GL.DeleteTexture(_texture2.Handle);
             base.OnUnload();
         }
     }

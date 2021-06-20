@@ -8,6 +8,7 @@ in vec2 texCoord;
 
 //uniform vec4 uni4Color;
 uniform sampler2D texture0;
+uniform sampler2D texture1;
 
 void main()
 {
@@ -15,5 +16,6 @@ void main()
     //outputColor = vertexColor;
     //outputColor = vec4(ourColor, 1.0);
     //outputColor = uni4Color;
-    outputColor = texture(texture0, texCoord);
+    //outputColor = texture(texture0, texCoord);
+    outputColor = mix(texture(texture0, texCoord), texture(texture1, texCoord), 0.2);
 }
