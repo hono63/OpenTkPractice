@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics;
 using OpenTK;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -60,6 +61,9 @@ namespace HelloDotNetCoreTK
             _elementBufObj = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufObj);
             GL.BufferData(BufferTarget.ElementArrayBuffer, _index.Length * sizeof(uint), _index, BufferUsageHint.StaticDraw);
+            // サポートする最大頂点数を知る
+            GL.GetInteger(GetPName.MaxVertexAttribs, out int maxCount);
+            Debug.WriteLine($"Maximum vertex support: {maxCount}");
             // shader
             _shader = new Shader(@"..\..\..\Shaders\shader.vert", @"..\..\..\Shaders\shader.frag");
             _shader.Use();
