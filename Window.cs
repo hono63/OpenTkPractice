@@ -17,7 +17,7 @@ namespace HelloDotNetCoreTK
     public class Window : GameWindow
     {
         // 三角形の頂点 NDC (Normalized Device Coordinates)
-        private readonly float[] _vertexTriangle =
+        private readonly float[] _vertex =
         {
             -0.5f, -0.5f, 0.0f, // 左下
             +0.5f, -0.5f, 0.0f, // 右下
@@ -31,8 +31,8 @@ namespace HelloDotNetCoreTK
             -0.5f, -0.5f, 0.0f, // 左下
             -0.5f, +0.5f, 0.0f, // 左上
         };
-        // 色付き頂点
-        private readonly float[] _vertex =
+        // 色付き三角形頂点
+        private readonly float[] _vertexGradation =
         {   // position           // color
             -0.5f, -0.5f, 0.0f,   1f, 0f, 0f, // 左下
             +0.5f, -0.5f, 0.0f,   0f, 1f, 0f, // 右下
@@ -44,6 +44,7 @@ namespace HelloDotNetCoreTK
             0, 1, 3,
             1, 2, 3,
         };
+        private Stopwatch _timer;
         private int _vertexBufObj;
         private int _vertexArrayObj;
         private int _elementBufObj;
@@ -53,13 +54,42 @@ namespace HelloDotNetCoreTK
             : base(gameWinSet, nativeWinSet)
         { }
 
+        /// <summary>
+        /// 読み込み時の初期化
+        /// </summary>
         protected override void OnLoad()
         {
             // OpenGL初期化
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+            PrepareTri();
+            // shader
+            _shader = new Shader(@"..\..\..\Shaders\shader.vert", @"..\..\..\Shaders\shader.frag");
+            _shader.Use();
+            StartStopwatch();
+            base.OnLoad();
+        }
+
+        // 三角形を準備
+        private void PrepareTri()
+        {
             _vertexBufObj = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufObj);
             GL.BufferData(BufferTarget.ArrayBuffer, _vertex.Length * sizeof(float), _vertex, BufferUsageHint.StaticDraw);
+            _vertexArrayObj = GL.GenVertexArray();
+            GL.BindVertexArray(_vertexArrayObj);
+            // 頂点pointer
+            int idx = 0, size = 3, stride = 3 * sizeof(float), offset = 0;
+            VertexAttribPointerType typ = VertexAttribPointerType.Float;
+            bool is_normalized = false;
+            GL.VertexAttribPointer(idx, size, typ, is_normalized, stride, offset);
+            GL.EnableVertexAttribArray(idx);
+        }
+        // 色付き三角形
+        private void PrepareGradTri()
+        {
+            _vertexBufObj = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufObj);
+            GL.BufferData(BufferTarget.ArrayBuffer, _vertexGradation.Length * sizeof(float), _vertexGradation, BufferUsageHint.StaticDraw);
             _vertexArrayObj = GL.GenVertexArray();
             GL.BindVertexArray(_vertexArrayObj);
             // 頂点pointer
@@ -73,30 +103,65 @@ namespace HelloDotNetCoreTK
             offset = 3 * sizeof(float);
             GL.VertexAttribPointer(idx, size, typ, is_normalized, stride, offset);
             GL.EnableVertexAttribArray(idx);
-            // EBO
-            //_elementBufObj = GL.GenBuffer();
-            //GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufObj);
-            //GL.BufferData(BufferTarget.ElementArrayBuffer, _index.Length * sizeof(uint), _index, BufferUsageHint.StaticDraw);
-            // サポートする最大頂点数を知る
-            //GL.GetInteger(GetPName.MaxVertexAttribs, out int maxCount);
-            //Debug.WriteLine($"Maximum vertex support: {maxCount}");
-            // shader
-            _shader = new Shader(@"..\..\..\Shaders\shader.vert", @"..\..\..\Shaders\shader.frag");
-            _shader.Use();
-            base.OnLoad();
         }
 
+        private void PrepareEBO()
+        {
+            _vertexBufObj = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufObj);
+            GL.BufferData(BufferTarget.ArrayBuffer, _vertex.Length * sizeof(float), _vertex, BufferUsageHint.StaticDraw);
+            _vertexArrayObj = GL.GenVertexArray();
+            GL.BindVertexArray(_vertexArrayObj);
+            // 頂点pointer
+            int idx = 0, size = 3, stride = 3 * sizeof(float), offset = 0;
+            VertexAttribPointerType typ = VertexAttribPointerType.Float;
+            bool is_normalized = false;
+            GL.VertexAttribPointer(idx, size, typ, is_normalized, stride, offset);
+            GL.EnableVertexAttribArray(idx);
+            // EBO
+            _elementBufObj = GL.GenBuffer();
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufObj);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, _index.Length * sizeof(uint), _index, BufferUsageHint.StaticDraw);
+        }
+
+        private void StartStopwatch()
+        {
+            _timer = new Stopwatch();
+            _timer.Start();
+        }
+
+        private void SupportedMaxVertex()
+        {
+            // サポートする最大頂点数を知る
+            GL.GetInteger(GetPName.MaxVertexAttribs, out int maxCount);
+            Debug.WriteLine($"Maximum vertex support: {maxCount}");
+        }
+
+        /// <summary>
+        /// レンダーループ
+        /// </summary>
         protected override void OnRenderFrame(FrameEventArgs e)
         {
-            // レンダーループを作る
             GL.Clear(ClearBufferMask.ColorBufferBit);
             _shader.Use();
+            ChangeColorByTimer();
             GL.BindVertexArray(_vertexArrayObj);
             int first = 0, count = 3;
             GL.DrawArrays(PrimitiveType.Triangles, first, count);
             //GL.DrawElements(PrimitiveType.Triangles, _index.Length, DrawElementsType.UnsignedInt, 0);
             SwapBuffers();
             base.OnRenderFrame(e);
+        }
+
+        // 時間経過で色を変える
+        void ChangeColorByTimer()
+        {
+            double timeValue = _timer.Elapsed.TotalSeconds;
+            float greenValue = (float)Math.Sin(timeValue) / 2.0f + 0.5f;
+            // fragシェーダーの uni4Color に値を代入
+            int location = GL.GetUniformLocation(_shader.Handle, "uni4Color");
+            float[] val = { 0f, greenValue, 0f, 1f };
+            GL.Uniform4(location, val[0], val[1], val[2], val[3]); // 4つの値を代入
         }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
